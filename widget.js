@@ -2,7 +2,7 @@
 
 // Localize jQuery variable
 var jQuery;
-
+var map;
 /******** Load jQuery if not present *********/
 if (window.jQuery === undefined || window.jQuery.fn.jquery !== '2.1.1') {
     var jQueryScriptTag = document.createElement('script');
@@ -40,6 +40,7 @@ function scriptLoadHandler() {
 function main() {
 
   jQuery(document).ready(function($) {
+
     /******* Load CSS *******/
     var css_link = document.createElement('link');
     css_link.setAttribute("rel", "stylesheet");
@@ -71,32 +72,51 @@ function main() {
 
   function mapScriptLoadHandler() {
     jQuery('#submitButton').on('click', function(e){
-      e.preventDefault();
-      var postcode = jQuery('#postcode').val();
-      var postcode_url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + postcode + '&key=AIzaSyC-Fq5EkRdM2TFI9a_G5MGbfirTmwmcWOg';
-      jQuery.getJSON(postcode_url, function(coordinates){
-        console.log(coordinates.results[0].geometry.location.lat);
-        var lat = coordinates.results[0].geometry.location.lat;
-        var lng = coordinates.results[0].geometry.location.lng;
-        loadMap(lat,lng);
-      });
+      var address = jQuery('#postcode').val();
+      getCoordinates(address);
     });
-    function loadMap(lat,lng) {
-      var map = L.map('map').setView([lat, lng], 16);
-      L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-      }).addTo(map);
-
-      var jsonp_url = 'http://data.police.uk/api/crimes-street/all-crime?lat=' + lat + '&lng=' + lng;
-      jQuery.getJSON(jsonp_url, function(data) {
-        data.forEach(function(event){
-          L.marker([event.location.latitude, event.location.longitude]).addTo(map)
-          .bindPopup(event.category);
-        });
-      });
-    };
   }
+}
 
+function submitAddress(){
+  jQuery('#submitButton').on('click', function(e){
+    var address = jQuery('#postcode').val();
+    getCoordinates(address);
+  });
+}
+
+function getCoordinates(address) {
+  var lat, lng;
+  var address_url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + address + '&key=AIzaSyC-Fq5EkRdM2TFI9a_G5MGbfirTmwmcWOg';
+  jQuery.getJSON(address_url, function(coordinates){
+    lat = coordinates.results[0].geometry.location.lat;
+    lng = coordinates.results[0].geometry.location.lng;
+  }).done(function(){
+    loadMap(lat,lng);
+    getCrimes(lat,lng);
+  });
+}
+
+function getCrimes(lat,lng){
+  var jsonp_url = 'http://data.police.uk/api/crimes-street/all-crime?lat=' + lat + '&lng=' + lng;
+  jQuery.getJSON(jsonp_url, function(data) {
+    data.forEach(function(event){
+      L.marker([event.location.latitude, event.location.longitude]).addTo(map)
+      .bindPopup(event.category);
+    });
+  });
+}
+
+function loadMap(lat,lng) {
+  if(map === undefined) {
+    map = L.map('map').setView([lat, lng], 16);
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+  } else {
+    map.setView([lat, lng], 16);
+  }
+  
 }
 
 })(); // We call our anonymous function immediately
